@@ -140,3 +140,32 @@ pub fn erase_line(field: &mut Field) {
         }
     }
 }
+
+pub fn spwan_block(game: &mut Game) -> Result<(), ()> {
+    // posの座標を初期位置へ
+    game.pos = Position::init();
+
+    // ブロックをランダム生成
+    game.block = rand::random();
+
+    // 衝突チェック
+    if is_collision(&game.field, &game.pos, game.block) {
+        Err(())
+    } else {
+        Ok(())
+    }
+}
+
+// ゲームオーバー処理
+pub fn gameover(game: &Game) {
+    draw(game);
+    print!("GAMEOVER");
+    quit();
+}
+
+// 終了処理
+pub fn quit() -> ! {
+    // カーソルを再表示
+    println!("\x1b[?25h");
+    std::process::exit(0);
+}

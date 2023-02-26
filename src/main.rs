@@ -8,7 +8,7 @@ use std::{
     thread, time,
 };
 
-use crate::game::{erase_line, fix_block, move_block};
+use crate::game::{erase_line, fix_block, gameover, move_block, quit, spwan_block};
 
 fn sleep(milliseconds: u64) {
     thread::sleep(time::Duration::from_millis(milliseconds))
@@ -47,9 +47,11 @@ fn main() {
                     // ラインの削除処理
                     erase_line(&mut game.field);
 
-                    // posの座標を初期値へ
-                    game.pos = Position::init();
-                    game.block = rand::random();
+                    // ブロックの生成
+                    if spwan_block(&mut game).is_err() {
+                        // ブロックを生成できないならゲームオーバー
+                        gameover(&game);
+                    };
                 }
 
                 // フィールドを描画
@@ -93,9 +95,7 @@ fn main() {
                 draw(&game);
             }
             Ok(Key::Char('q')) => {
-                // カーソルを再表示
-                println!("\x1b[?25h");
-                return;
+                quit();
             }
             _ => (), // 何もしない
         }
