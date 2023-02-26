@@ -1,246 +1,59 @@
+mod block;
+mod game;
+
+use game::{draw, is_collision, Game, Position};
 use getch_rs::{Getch, Key};
-use rand::{
-    distributions::{Distribution, Standard},
-    Rng,
-};
 use std::{
     sync::{Arc, Mutex},
     thread, time,
 };
 
-const FIELD_WIDTH: usize = 11 + 2; // フィールド+壁
-const FIELD_HEIGHT: usize = 20 + 1; // フィールド+壁
-type Field = [[usize; FIELD_WIDTH]; FIELD_HEIGHT];
-
-const DEFAULT_FIELD: Field = [
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-];
-
-#[derive(Clone, Copy)]
-enum BlockKind {
-    I,
-    O,
-    S,
-    Z,
-    J,
-    L,
-    T,
-}
-
-impl Distribution<BlockKind> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> BlockKind {
-        return match rng.gen_range(0..=6) {
-            0 => BlockKind::I,
-            1 => BlockKind::O,
-            2 => BlockKind::S,
-            3 => BlockKind::Z,
-            4 => BlockKind::J,
-            5 => BlockKind::L,
-            _ => BlockKind::T,
-        };
-    }
-}
-
-const BLOCK_SIZE: usize = 4;
-
-type BlockShape = [[usize; BLOCK_SIZE]; BLOCK_SIZE];
-const BLOCKS: [BlockShape; 7] = [
-    // I Block
-    [
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [1, 1, 1, 1],
-        [0, 0, 0, 0],
-    ],
-    // O Block
-    [
-        [0, 0, 0, 0],
-        [0, 1, 1, 0],
-        [0, 1, 1, 0],
-        [0, 0, 0, 0],
-    ],
-    // S Block
-    [
-        [0, 0, 0, 0],
-        [0, 1, 1, 0],
-        [1, 1, 0, 0],
-        [0, 0, 0, 0],
-    ],
-    // Z Block
-    [
-        [0, 0, 0, 0],
-        [1, 1, 0, 0],
-        [0, 1, 1, 0],
-        [0, 0, 0, 0],
-    ],
-    // J Block
-    [
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 1, 0],
-        [0, 0, 0, 0],
-    ],
-    // L Block
-    [
-        [0, 0, 0, 0],
-        [0, 0, 1, 0],
-        [1, 1, 1, 0],
-        [0, 0, 0, 0],
-    ],
-    // T Block
-    [
-        [0, 0, 0, 0],
-        [0, 1, 0, 0],
-        [1, 1, 1, 0],
-        [0, 0, 0, 0],
-    ],
-];
-
-struct Position {
-    x: usize,
-    y: usize,
-}
+use crate::game::{erase_line, fix_block, move_block};
 
 fn sleep(milliseconds: u64) {
     thread::sleep(time::Duration::from_millis(milliseconds))
 }
 
-// フィールドを描画する
-fn draw(field: &Field, pos: &Position, block: BlockKind) {
-    // 描画用フィールドの生成
-    let mut field_buf: Field = field.clone();
-
-    // 描画用フィールドにブロックの情報を書き込む
-    for y in 0..BLOCK_SIZE {
-        for x in 0..BLOCK_SIZE {
-            if BLOCKS[block as usize][y][x] == 1 {
-                field_buf[y + pos.y][x + pos.x] = 1;
-            }
-
-            //
-        }
-    }
-
-    // フィールドを描画
-    println!("\x1b[H"); // カーソルを先頭に移動
-    for y in 0..FIELD_HEIGHT {
-        for x in 0..FIELD_WIDTH {
-            if field_buf[y][x] == 1 {
-                print!("[]");
-            } else {
-                print!(" .");
-            }
-        }
-        println!();
-    }
-}
-
-fn is_collision(field: &Field, pos: &Position, block: BlockKind) -> bool {
-    for y in 0..BLOCK_SIZE {
-        for x in 0..BLOCK_SIZE {
-            if y + pos.y >= FIELD_HEIGHT || x + pos.x >= FIELD_WIDTH {
-                continue;
-            }
-
-            if field[y + pos.y][x + pos.x] & BLOCKS[block as usize][y][x] == 1 {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
 fn main() {
-    let field: Arc<Mutex<Field>> = Arc::new(Mutex::new(DEFAULT_FIELD));
-    let pos = Arc::new(Mutex::new(Position { x: 4, y: 0 }));
-    let block = Arc::new(Mutex::new(rand::random::<BlockKind>()));
+    let game = Arc::new(Mutex::new(Game::new()));
 
     // 画面クリア
     println!("\x1b[2J\x1b[H\x1b[?25l");
     // フィールドを描画
-    draw(
-        &field.lock().unwrap(),
-        &pos.lock().unwrap(),
-        *block.lock().unwrap(),
-    );
+    draw(&game.lock().unwrap());
 
     // 自然落下処理
     {
-        let pos = Arc::clone(&pos);
-        let field = Arc::clone(&field);
-        let block = Arc::clone(&block);
+        let game = Arc::clone(&game);
         let _ = thread::spawn(move || {
             loop {
                 // 1秒スリープする
                 sleep(1000);
 
                 // 自然落下
-                let mut pos = pos.lock().unwrap();
-                let mut field = field.lock().unwrap();
-                let mut block = block.lock().unwrap();
+                let mut game = game.lock().unwrap();
                 let new_pos = Position {
-                    x: pos.x,
-                    y: pos.y + 1,
+                    x: game.pos.x,
+                    y: game.pos.y + 1,
                 };
 
-                if !is_collision(&field, &new_pos, *block) {
+                if !is_collision(&game.field, &new_pos, game.block) {
                     // posの座標を更新
-                    *pos = new_pos
+                    game.pos = new_pos;
                 } else {
                     // ブロックをフィールドに固定
-                    for y in 0..BLOCK_SIZE {
-                        for x in 0..BLOCK_SIZE {
-                            if BLOCKS[*block as usize][y][x] == 1 {
-                                field[y + pos.y][x + pos.x] = 1;
-                            }
-                        }
-                    }
+                    fix_block(&mut game);
 
                     // ラインの削除処理
-                    for y in 1..FIELD_HEIGHT - 1 {
-                        let mut can_erase = true;
-                        for x in 1..FIELD_WIDTH - 1 {
-                            if field[y][x] == 0 {
-                                can_erase = false;
-                                break;
-                            }
-                        }
-
-                        if can_erase {
-                            for y2 in (2..=y).rev() {
-                                field[y2] = field[y2 - 1];
-                            }
-                        }
-                    }
+                    erase_line(&mut game.field);
 
                     // posの座標を初期値へ
-                    *pos = Position { x: 4, y: 0 };
-                    *block = rand::random();
+                    game.pos = Position::init();
+                    game.block = rand::random();
                 }
 
                 // フィールドを描画
-                draw(&field, &pos, *block);
+                draw(&game);
             }
         });
     }
@@ -250,46 +63,34 @@ fn main() {
         // キー入力待ち
         match g.getch() {
             Ok(Key::Left) => {
-                let mut pos = pos.lock().unwrap();
-                let field = field.lock().unwrap();
-                let block = block.lock().unwrap();
+                let mut game = game.lock().unwrap();
 
                 let new_pos = Position {
-                    x: pos.x.checked_sub(1).unwrap_or_else(|| pos.x),
-                    y: pos.y,
+                    x: game.pos.x.checked_sub(1).unwrap_or(game.pos.x),
+                    y: game.pos.y,
                 };
-                if !is_collision(&field, &new_pos, *block) {
-                    *pos = new_pos;
-                }
-                draw(&field, &pos, *block);
+                move_block(&mut game, new_pos);
+                draw(&game);
             }
             Ok(Key::Right) => {
-                let mut pos = pos.lock().unwrap();
-                let mut field = field.lock().unwrap();
-                let block = block.lock().unwrap();
+                let mut game = game.lock().unwrap();
 
                 let new_pos = Position {
-                    x: pos.x + 1,
-                    y: pos.y,
+                    x: game.pos.x + 1,
+                    y: game.pos.y,
                 };
-                if !is_collision(&field, &new_pos, *block) {
-                    *pos = new_pos;
-                }
-                draw(&field, &pos, *block);
+                move_block(&mut game, new_pos);
+                draw(&game);
             }
             Ok(Key::Down) => {
-                let mut pos = pos.lock().unwrap();
-                let mut field = field.lock().unwrap();
-                let block = block.lock().unwrap();
+                let mut game = game.lock().unwrap();
 
                 let new_pos = Position {
-                    x: pos.x,
-                    y: pos.y + 1,
+                    x: game.pos.x,
+                    y: game.pos.y + 1,
                 };
-                if !is_collision(&field, &new_pos, *block) {
-                    *pos = new_pos;
-                }
-                draw(&field, &pos, *block);
+                move_block(&mut game, new_pos);
+                draw(&game);
             }
             Ok(Key::Char('q')) => {
                 // カーソルを再表示
