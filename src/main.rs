@@ -8,7 +8,9 @@ use std::{
     thread, time,
 };
 
-use crate::game::{erase_line, fix_block, gameover, move_block, quit, spwan_block};
+use crate::game::{
+    erase_line, fix_block, gameover, move_block, quit, rotate_left, rotate_right, spwan_block,
+};
 
 fn sleep(milliseconds: u64) {
     thread::sleep(time::Duration::from_millis(milliseconds))
@@ -37,7 +39,7 @@ fn main() {
                     y: game.pos.y + 1,
                 };
 
-                if !is_collision(&game.field, &new_pos, game.block) {
+                if !is_collision(&game.field, &new_pos, &game.block) {
                     // posの座標を更新
                     game.pos = new_pos;
                 } else {
@@ -92,6 +94,18 @@ fn main() {
                     y: game.pos.y + 1,
                 };
                 move_block(&mut game, new_pos);
+                draw(&game);
+            }
+            Ok(Key::Char('z')) => {
+                // 左回転
+                let mut game = game.lock().unwrap();
+                rotate_left(&mut game);
+                draw(&game);
+            }
+            Ok(Key::Char('x')) => {
+                // 右回転
+                let mut game = game.lock().unwrap();
+                rotate_right(&mut game);
                 draw(&game);
             }
             Ok(Key::Char('q')) => {
