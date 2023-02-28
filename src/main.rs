@@ -8,9 +8,7 @@ use std::{
     thread, time,
 };
 
-use crate::game::{
-    erase_line, fix_block, gameover, move_block, quit, rotate_left, rotate_right, spwan_block,
-};
+use crate::game::{gameover, hard_drop, landing, move_block, quit, rotate_left, rotate_right};
 
 fn sleep(milliseconds: u64) {
     thread::sleep(time::Duration::from_millis(milliseconds))
@@ -43,17 +41,10 @@ fn main() {
                     // posの座標を更新
                     game.pos = new_pos;
                 } else {
-                    // ブロックをフィールドに固定
-                    fix_block(&mut game);
-
-                    // ラインの削除処理
-                    erase_line(&mut game.field);
-
-                    // ブロックの生成
-                    if spwan_block(&mut game).is_err() {
+                    if landing(&mut game).is_err() {
                         // ブロックを生成できないならゲームオーバー
                         gameover(&game);
-                    };
+                    }
                 }
 
                 // フィールドを描画
@@ -66,7 +57,18 @@ fn main() {
     loop {
         // キー入力待ち
         match g.getch() {
+            Ok(Key::Up) => {
+                // ハードドロップ
+                let mut game = game.lock().unwrap();
+                hard_drop(&mut game);
+                if landing(&mut game).is_err() {
+                    // ブロックを生成できないならゲームオーバー
+                    gameover(&game);
+                }
+                draw(&game);
+            }
             Ok(Key::Left) => {
+                // 左移動
                 let mut game = game.lock().unwrap();
 
                 let new_pos = Position {
@@ -77,6 +79,7 @@ fn main() {
                 draw(&game);
             }
             Ok(Key::Right) => {
+                // 右移動
                 let mut game = game.lock().unwrap();
 
                 let new_pos = Position {
@@ -87,6 +90,7 @@ fn main() {
                 draw(&game);
             }
             Ok(Key::Down) => {
+                // 下移動
                 let mut game = game.lock().unwrap();
 
                 let new_pos = Position {

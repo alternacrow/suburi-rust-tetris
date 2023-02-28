@@ -7,6 +7,7 @@ pub const FIELD_WIDTH: usize = 11 + 2 + 2; // フィールド+壁+番兵
 pub const FIELD_HEIGHT: usize = 20 + 1 + 1; // フィールド+壁+番兵
 pub type Field = [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT];
 
+#[derive(Clone, Copy)]
 pub struct Position {
     pub x: usize,
     pub y: usize,
@@ -184,6 +185,32 @@ pub fn rotate_right(game: &mut Game) {
     if !is_collision(&game.field, &game.pos, &new_shape) {
         game.block = new_shape;
     }
+}
+
+// ハードドロップする
+pub fn hard_drop(game: &mut Game) {
+    while {
+        let new_pos = Position {
+            x: game.pos.x,
+            y: game.pos.y + 1,
+        };
+        !is_collision(&game.field, &new_pos, &game.block)
+    } {
+        game.pos.y += 1;
+    }
+    let new_pos = game.pos;
+    move_block(game, new_pos);
+}
+
+// ブロック落下後の処理
+pub fn landing(game: &mut Game) -> Result<(), ()> {
+    // ブロックをフィールドに固定
+    fix_block(game);
+    // ラインの削除処理
+    erase_line(&mut game.field);
+    // ブロックの生成
+    spwan_block(game)?;
+    Ok(())
 }
 
 // ゲームオーバー処理
