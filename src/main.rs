@@ -8,7 +8,9 @@ use std::{
     thread, time,
 };
 
-use crate::game::{gameover, hard_drop, landing, move_block, quit, rotate_left, rotate_right};
+use crate::game::{
+    gameover, hard_drop, hold, landing, move_block, quit, rotate_left, rotate_right,
+};
 
 fn sleep(milliseconds: u64) {
     thread::sleep(time::Duration::from_millis(milliseconds))
@@ -57,6 +59,12 @@ fn main() {
     loop {
         // キー入力待ち
         match g.getch() {
+            Ok(Key::Char(' ')) => {
+                // ホールド
+                let mut game = game.lock().unwrap();
+                hold(&mut game);
+                draw(&game);
+            }
             Ok(Key::Up) => {
                 // ハードドロップ
                 let mut game = game.lock().unwrap();

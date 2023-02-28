@@ -23,6 +23,8 @@ pub struct Game {
     pub field: Field,
     pub pos: Position,
     pub block: BlockShape,
+    pub hold: Option<BlockShape>,
+    pub holded: bool,
 }
 
 const DEFAULT_FIELD: Field = [
@@ -56,6 +58,8 @@ impl Game {
             field: DEFAULT_FIELD,
             pos: Position::init(),
             block: BLOCKS[rand::random::<BlockKind>() as usize],
+            hold: None,
+            holded: false,
         }
     }
 }
@@ -77,7 +81,15 @@ fn ghost_pos(field: &Field, pos: &Position, block: &BlockShape) -> Position {
 
 // フィールドを描画する
 #[allow(clippy::needless_range_loop)]
-pub fn draw(Game { field, pos, block }: &Game) {
+pub fn draw(
+    Game {
+        field,
+        pos,
+        block,
+        hold,
+        ..
+    }: &Game,
+) {
     // 描画用フィールドの生成
     let mut field_buf: Field = *field;
 
@@ -88,6 +100,18 @@ pub fn draw(Game { field, pos, block }: &Game) {
             if block[y][x] != block_kind::NONE {
                 field_buf[y + ghost_pos.y][x + ghost_pos.x] = block_kind::GHOST;
             }
+        }
+    }
+
+    // ホールドを描画
+    println!("\x1b[2;28HHOLD"); // カーソルをホールド位置に移動
+    if let Some(hold) = hold {
+        for y in 0..BLOCK_SIZE {
+            print!("\x1b[{};28H", y + 3); // カーソルを移動
+            for x in 0..BLOCK_SIZE {
+                print!("{}", COLOR_TABLE[hold[y][x]]);
+            }
+            println!();
         }
     }
 
@@ -137,7 +161,11 @@ pub fn move_block(game: &mut Game, new_pos: Position) {
 }
 
 // ブロックをフィールドに固定する
-pub fn fix_block(Game { field, pos, block }: &mut Game) {
+pub fn fix_block(
+    Game {
+        field, pos, block, ..
+    }: &mut Game,
+) {
     for y in 0..BLOCK_SIZE {
         for x in 0..BLOCK_SIZE {
             if block[y][x] != block_kind::NONE {
@@ -167,7 +195,7 @@ pub fn erase_line(field: &mut Field) {
     }
 }
 
-pub fn spwan_block(game: &mut Game) -> Result<(), ()> {
+pub fn spawn_block(game: &mut Game) -> Result<(), ()> {
     // posの座標を初期位置へ
     game.pos = Position::init();
 
@@ -267,6 +295,29 @@ pub fn hard_drop(game: &mut Game) {
     move_block(game, new_pos);
 }
 
+// ホールド処理
+// - 1回目のホールドは現在のブロックをホールド
+// - 2回目以降のホールドは現在のブロックとホールドを交換
+// - 現在のブロックに対して既にホールドしている場合は何もしない
+pub fn hold(game: &mut Game) {
+    if game.holded {
+        // 現在のブロックに対して既にホールドしている場合は早期リターン
+        return;
+    }
+    if let Some(mut hold) = game.hold {
+        // ホールドの交換
+        std::mem::swap(&mut hold, &mut game.block);
+        game.hold = Some(hold);
+        game.pos = Position::init();
+    } else {
+        // ホールドして、新たなブロックを生成
+        game.hold = Some(game.block);
+        spawn_block(game).ok();
+    }
+    // ホールド済のフラグを立てる
+    game.holded = true;
+}
+
 // ブロック落下後の処理
 pub fn landing(game: &mut Game) -> Result<(), ()> {
     // ブロックをフィールドに固定
@@ -274,7 +325,9 @@ pub fn landing(game: &mut Game) -> Result<(), ()> {
     // ラインの削除処理
     erase_line(&mut game.field);
     // ブロックの生成
-    spwan_block(game)?;
+    spawn_block(game)?;
+    // 再ホールド可能にする
+    game.holded = false;
     Ok(())
 }
 
