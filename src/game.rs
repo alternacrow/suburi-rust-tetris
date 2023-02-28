@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::block::{
     block_kind::{self, WALL as W},
     BlockColor, BlockKind, BlockShape, BLOCKS, BLOCK_SIZE, COLOR_TABLE,
@@ -19,12 +21,16 @@ impl Position {
     }
 }
 
+// ネクストブロックを3つ表示
+pub const NEXT_LENGTH: usize = 3;
+
 pub struct Game {
     pub field: Field,
     pub pos: Position,
     pub block: BlockShape,
     pub hold: Option<BlockShape>,
     pub holded: bool,
+    pub next: VecDeque<BlockShape>,
 }
 
 const DEFAULT_FIELD: Field = [
@@ -60,6 +66,13 @@ impl Game {
             block: BLOCKS[rand::random::<BlockKind>() as usize],
             hold: None,
             holded: false,
+            next: {
+                let mut deque = VecDeque::new();
+                for _ in 0..NEXT_LENGTH {
+                    deque.push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
+                }
+                deque
+            },
         }
     }
 }
@@ -87,11 +100,23 @@ pub fn draw(
         pos,
         block,
         hold,
+        next,
         ..
     }: &Game,
 ) {
     // 描画用フィールドの生成
     let mut field_buf: Field = *field;
+
+    // 描画用フィールドにブロックの情報を書き込む
+    for y in 0..BLOCK_SIZE {
+        for x in 0..BLOCK_SIZE {
+            if block[y][x] != block_kind::NONE {
+                field_buf[y + pos.y][x + pos.x] = block[y][x];
+            }
+
+            //
+        }
+    }
 
     // 描画フィールドにゴーストブロックを書き込む
     let ghost_pos = ghost_pos(field, pos, block);
@@ -115,14 +140,15 @@ pub fn draw(
         }
     }
 
-    // 描画用フィールドにブロックの情報を書き込む
-    for y in 0..BLOCK_SIZE {
-        for x in 0..BLOCK_SIZE {
-            if block[y][x] != block_kind::NONE {
-                field_buf[y + pos.y][x + pos.x] = block[y][x];
+    // ネクストを描画
+    println!("\x1b[8;28HNEXT"); // カーソルをネクスト位置に移動
+    for (i, next) in next.iter().enumerate() {
+        for y in 0..BLOCK_SIZE {
+            print!("\x1b[{};28H", i * BLOCK_SIZE + y + 9); // カーソルを移動
+            for x in 0..BLOCK_SIZE {
+                print!("{}", COLOR_TABLE[next[y][x]]);
             }
-
-            //
+            println!();
         }
     }
 
@@ -199,8 +225,11 @@ pub fn spawn_block(game: &mut Game) -> Result<(), ()> {
     // posの座標を初期位置へ
     game.pos = Position::init();
 
-    // ブロックをランダム生成
-    game.block = BLOCKS[rand::random::<BlockKind>() as usize];
+    // ネクストキューから次のブロックを取り出す
+    game.block = game.next.pop_front().unwrap();
+    // ブロックをランダム生成して、ネクストキューに追加
+    game.next
+        .push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
 
     // 衝突チェック
     if is_collision(&game.field, &game.pos, &game.block) {
