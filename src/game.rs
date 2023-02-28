@@ -1,8 +1,11 @@
-use crate::block::{BlockKind, BlockShape, BLOCKS, BLOCK_SIZE};
+use crate::block::{
+    block_kind::{self, WALL as W},
+    BlockColor, BlockKind, BlockShape, BLOCKS, BLOCK_SIZE, COLOR_TABLE,
+};
 
 pub const FIELD_WIDTH: usize = 11 + 2 + 2; // フィールド+壁+番兵
 pub const FIELD_HEIGHT: usize = 20 + 1 + 1; // フィールド+壁+番兵
-pub type Field = [[usize; FIELD_WIDTH]; FIELD_HEIGHT];
+pub type Field = [[BlockColor; FIELD_WIDTH]; FIELD_HEIGHT];
 
 pub struct Position {
     pub x: usize,
@@ -22,27 +25,27 @@ pub struct Game {
 }
 
 const DEFAULT_FIELD: Field = [
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, W, 0],
+    [0, W, W, W, W, W, W, W, W, W, W, W, W, W, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
@@ -65,8 +68,8 @@ pub fn draw(Game { field, pos, block }: &Game) {
     // 描画用フィールドにブロックの情報を書き込む
     for y in 0..BLOCK_SIZE {
         for x in 0..BLOCK_SIZE {
-            if block[y][x] == 1 {
-                field_buf[y + pos.y][x + pos.x] = 1;
+            if block[y][x] != block_kind::NONE {
+                field_buf[y + pos.y][x + pos.x] = block[y][x];
             }
 
             //
@@ -77,11 +80,7 @@ pub fn draw(Game { field, pos, block }: &Game) {
     println!("\x1b[H"); // カーソルを先頭に移動
     for y in 0..FIELD_HEIGHT - 1 {
         for x in 1..FIELD_WIDTH - 1 {
-            if field_buf[y][x] == 1 {
-                print!("[]");
-            } else {
-                print!(" .");
-            }
+            print!("{}", COLOR_TABLE[field_buf[y][x]]);
         }
         println!();
     }
@@ -95,7 +94,7 @@ pub fn is_collision(field: &Field, pos: &Position, block: &BlockShape) -> bool {
                 continue;
             }
 
-            if field[y + pos.y][x + pos.x] & block[y][x] == 1 {
+            if field[y + pos.y][x + pos.x] != block_kind::NONE && block[y][x] != block_kind::NONE {
                 return true;
             }
         }
@@ -115,8 +114,8 @@ pub fn move_block(game: &mut Game, new_pos: Position) {
 pub fn fix_block(Game { field, pos, block }: &mut Game) {
     for y in 0..BLOCK_SIZE {
         for x in 0..BLOCK_SIZE {
-            if block[y][x] == 1 {
-                field[y + pos.y][x + pos.x] = 1;
+            if block[y][x] != block_kind::NONE {
+                field[y + pos.y][x + pos.x] = block[y][x];
             }
         }
     }
