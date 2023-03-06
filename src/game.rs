@@ -24,6 +24,15 @@ impl Position {
 // ネクストブロックを3つ表示
 pub const NEXT_LENGTH: usize = 3;
 
+// 得点表
+pub const SCORE_TABLE: [usize; 5] = [
+    0,   // 1段消し
+    1,   // 2段消し
+    5,   // 3段消し
+    25,  // 4段消し
+    100, // 5段消し
+];
+
 pub struct Game {
     pub field: Field,
     pub pos: Position,
@@ -32,6 +41,7 @@ pub struct Game {
     pub holded: bool,
     pub next: VecDeque<BlockShape>,
     pub next_buf: VecDeque<BlockShape>,
+    pub score: usize,
 }
 
 const DEFAULT_FIELD: Field = [
@@ -69,6 +79,7 @@ impl Game {
             holded: false,
             next: gen_block().into(),
             next_buf: gen_block().into(),
+            score: 0,
         };
         spawn_block(&mut game).ok();
 
@@ -100,6 +111,7 @@ pub fn draw(
         block,
         hold,
         next,
+        score,
         ..
     }: &Game,
 ) {
@@ -151,6 +163,9 @@ pub fn draw(
         }
     }
 
+    // スコアを描画
+    println!("\x1b[22;28HSCORE: {}", score);
+
     // フィールドを描画
     println!("\x1b[H"); // カーソルを先頭に移動
     for y in 0..FIELD_HEIGHT - 1 {
@@ -200,8 +215,13 @@ pub fn fix_block(
     }
 }
 
-// 消せるラインがあれば削除し、段を下げる
-pub fn erase_line(field: &mut Field) {
+/**
+ * 消せるラインがあれば削除し、段を下げる
+ * 消したライン数を返す
+ */
+pub fn erase_line(field: &mut Field) -> usize {
+    let mut count = 0;
+
     // ラインの削除処理
     for y in 1..FIELD_HEIGHT - 2 {
         let mut can_erase = true;
@@ -213,11 +233,14 @@ pub fn erase_line(field: &mut Field) {
         }
 
         if can_erase {
+            count += 1;
             for y2 in (2..=y).rev() {
                 field[y2] = field[y2 - 1];
             }
         }
     }
+
+    count
 }
 
 pub fn spawn_block(game: &mut Game) -> Result<(), ()> {
@@ -358,7 +381,9 @@ pub fn landing(game: &mut Game) -> Result<(), ()> {
     // ブロックをフィールドに固定
     fix_block(game);
     // ラインの削除処理
-    erase_line(&mut game.field);
+    let line = erase_line(&mut game.field);
+    // 消したライン数に応じてスコアを加算
+    game.score += SCORE_TABLE[line];
     // ブロックの生成
     spawn_block(game)?;
     // 再ホールド可能にする
