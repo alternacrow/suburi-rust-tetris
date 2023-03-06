@@ -1,6 +1,7 @@
 use rand::{
     distributions::{Distribution, Standard},
-    Rng,
+    seq::SliceRandom,
+    thread_rng, Rng,
 };
 
 use block_kind::{I, J, L, O, S, T, Z};
@@ -18,6 +19,9 @@ pub enum BlockKind {
     T,
 }
 
+// ブロックの種類数
+const BLOCK_KIND_MAX: usize = 7;
+
 impl Distribution<BlockKind> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> BlockKind {
         match rng.gen_range(0..=6) {
@@ -34,22 +38,60 @@ impl Distribution<BlockKind> for Standard {
 
 pub const BLOCK_SIZE: usize = 4;
 
+// ブロックの形を表す配列
 pub type BlockShape = [[usize; BLOCK_SIZE]; BLOCK_SIZE];
-pub const BLOCKS: [BlockShape; 7] = [
+
+// ブロックの形状の配列
+pub const BLOCKS: [BlockShape; BLOCK_KIND_MAX] = [
     // I Block
-    [[0, 0, 0, 0], [0, 0, 0, 0], [I, I, I, I], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [I, I, I, I],
+        [0, 0, 0, 0],
+    ],
     // O Block
-    [[0, 0, 0, 0], [0, O, O, 0], [0, O, O, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [0, O, O, 0],
+        [0, O, O, 0],
+        [0, 0, 0, 0],
+    ],
     // S Block
-    [[0, 0, 0, 0], [0, S, S, 0], [S, S, 0, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [0, S, S, 0],
+        [S, S, 0, 0],
+        [0, 0, 0, 0],
+    ],
     // Z Block
-    [[0, 0, 0, 0], [Z, Z, 0, 0], [0, Z, Z, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [Z, Z, 0, 0],
+        [0, Z, Z, 0],
+        [0, 0, 0, 0],
+    ],
     // J Block
-    [[0, 0, 0, 0], [J, 0, 0, 0], [J, J, J, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [J, 0, 0, 0],
+        [J, J, J, 0],
+        [0, 0, 0, 0],
+    ],
     // L Block
-    [[0, 0, 0, 0], [0, 0, L, 0], [L, L, L, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [0, 0, L, 0],
+        [L, L, L, 0],
+        [0, 0, 0, 0],
+    ],
     // T Block
-    [[0, 0, 0, 0], [0, T, 0, 0], [T, T, T, 0], [0, 0, 0, 0]],
+    [
+        [0, 0, 0, 0],
+        [0, T, 0, 0],
+        [T, T, T, 0],
+        [0, 0, 0, 0],
+    ],
 ];
 
 pub mod block_kind {
@@ -77,3 +119,18 @@ pub const COLOR_TABLE: [&str; 10] = [
     "\x1b[48;2;255;127;000m__", // L
     "\x1b[48;2;255;255;000m__", // T
 ];
+
+pub fn gen_block() -> [BlockShape; BLOCK_KIND_MAX] {
+    let mut rng = thread_rng();
+    let mut que = [
+        BlockKind::I,
+        BlockKind::O,
+        BlockKind::S,
+        BlockKind::Z,
+        BlockKind::J,
+        BlockKind::L,
+        BlockKind::T,
+    ];
+    que.shuffle(&mut rng);
+    que.map(|block| BLOCKS[block as usize])
+}

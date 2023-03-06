@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::block::{
     block_kind::{self, WALL as W},
-    BlockColor, BlockKind, BlockShape, BLOCKS, BLOCK_SIZE, COLOR_TABLE,
+    gen_block, BlockColor, BlockKind, BlockShape, BLOCKS, BLOCK_SIZE, COLOR_TABLE,
 };
 
 pub const FIELD_WIDTH: usize = 11 + 2 + 2; // フィールド+壁+番兵
@@ -31,6 +31,7 @@ pub struct Game {
     pub hold: Option<BlockShape>,
     pub holded: bool,
     pub next: VecDeque<BlockShape>,
+    pub next_buf: VecDeque<BlockShape>,
 }
 
 const DEFAULT_FIELD: Field = [
@@ -60,20 +61,18 @@ const DEFAULT_FIELD: Field = [
 
 impl Game {
     pub fn new() -> Game {
-        Game {
+        let mut game = Game {
             field: DEFAULT_FIELD,
             pos: Position::init(),
             block: BLOCKS[rand::random::<BlockKind>() as usize],
             hold: None,
             holded: false,
-            next: {
-                let mut deque = VecDeque::new();
-                for _ in 0..NEXT_LENGTH {
-                    deque.push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
-                }
-                deque
-            },
-        }
+            next: gen_block().into(),
+            next_buf: gen_block().into(),
+        };
+        spawn_block(&mut game).ok();
+
+        game
     }
 }
 
@@ -140,9 +139,9 @@ pub fn draw(
         }
     }
 
-    // ネクストを描画
+    // ネクストを描画(3つ)
     println!("\x1b[8;28HNEXT"); // カーソルをネクスト位置に移動
-    for (i, next) in next.iter().enumerate() {
+    for (i, next) in next.iter().take(NEXT_LENGTH).enumerate() {
         for y in 0..BLOCK_SIZE {
             print!("\x1b[{};28H", i * BLOCK_SIZE + y + 9); // カーソルを移動
             for x in 0..BLOCK_SIZE {
@@ -227,9 +226,16 @@ pub fn spawn_block(game: &mut Game) -> Result<(), ()> {
 
     // ネクストキューから次のブロックを取り出す
     game.block = game.next.pop_front().unwrap();
-    // ブロックをランダム生成して、ネクストキューに追加
-    game.next
-        .push_back(BLOCKS[rand::random::<BlockKind>() as usize]);
+
+    if let Some(next) = game.next_buf.pop_front() {
+        // バフからネクストキューに供給
+        game.next.push_back(next);
+    } else {
+        // バフを生成
+        game.next_buf = gen_block().into();
+        // バフからネクストキューに供給
+        game.next.push_back(game.next_buf.pop_front().unwrap());
+    }
 
     // 衝突チェック
     if is_collision(&game.field, &game.pos, &game.block) {
