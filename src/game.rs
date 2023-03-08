@@ -42,6 +42,7 @@ pub struct Game {
     pub next: VecDeque<BlockShape>,
     pub next_buf: VecDeque<BlockShape>,
     pub score: usize,
+    pub line: usize,
 }
 
 const DEFAULT_FIELD: Field = [
@@ -80,6 +81,7 @@ impl Game {
             next: gen_block().into(),
             next_buf: gen_block().into(),
             score: 0,
+            line: 0,
         };
         spawn_block(&mut game).ok();
 
@@ -384,6 +386,8 @@ pub fn landing(game: &mut Game) -> Result<(), ()> {
     let line = erase_line(&mut game.field);
     // 消したライン数に応じてスコアを加算
     game.score += SCORE_TABLE[line];
+    // 消した段数の合計を加算
+    game.line += line;
     // ブロックの生成
     spawn_block(game)?;
     // 再ホールド可能にする
