@@ -33,6 +33,7 @@ pub const SCORE_TABLE: [usize; 5] = [
     100, // 5段消し
 ];
 
+#[derive(Clone)]
 pub struct Game {
     pub field: Field,
     pub pos: Position,

@@ -1,13 +1,12 @@
-use crate::game::*;
+use crate::ai::eval;
+use crate::game::{
+    draw, gameover, hard_drop, hold, is_collision, landing, move_block, quit, rotate_left,
+    rotate_right, Game, Position,
+};
 use getch_rs::{Getch, Key};
-use rand::Rng;
 use std::{
     sync::{Arc, Mutex},
     thread, time,
-};
-
-use crate::game::{
-    gameover, hard_drop, hold, landing, move_block, quit, rotate_left, rotate_right,
 };
 
 fn sleep(milliseconds: u64) {
@@ -151,28 +150,10 @@ pub fn auto() {
             // 100ミリ秒毎に自動で操作する
             sleep(100);
 
-            let mut rng = rand::thread_rng();
+            let elite = eval(&game);
+            game = elite;
 
-            // 20%くらいの確率でホールド
-            if rng.gen_range(0..5) == 0 {
-                hold(&mut game);
-            }
-
-            // ランダムに回転
-            for _ in 0..rng.gen_range(0..=3) {
-                rotate_right(&mut game);
-            }
-
-            // ランダムに横移動
-            let dx: isize = rng.gen_range(-4..=5);
-            let new_pos = Position {
-                x: (game.pos.x as isize + dx) as usize,
-                y: game.pos.y,
-            };
-            move_block(&mut game, new_pos);
-
-            // ハードドロップ
-            hard_drop(&mut game);
+            // エリート個体のブロックを落下
             if landing(&mut game).is_err() {
                 // ブロックを生成できないならゲームオーバー
                 gameover(&game);
