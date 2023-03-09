@@ -120,23 +120,21 @@ pub fn draw(
     // 描画用フィールドの生成
     let mut field_buf: Field = *field;
 
-    // 描画用フィールドにブロックの情報を書き込む
-    for y in 0..BLOCK_SIZE {
-        for x in 0..BLOCK_SIZE {
-            if block[y][x] != block_kind::NONE {
-                field_buf[y + pos.y][x + pos.x] = block[y][x];
-            }
-
-            //
-        }
-    }
-
     // 描画フィールドにゴーストブロックを書き込む
     let ghost_pos = ghost_pos(field, pos, block);
     for y in 0..BLOCK_SIZE {
         for x in 0..BLOCK_SIZE {
             if block[y][x] != block_kind::NONE {
                 field_buf[y + ghost_pos.y][x + ghost_pos.x] = block_kind::GHOST;
+            }
+        }
+    }
+
+    // 描画用フィールドにブロックの情報を書き込む
+    for y in 0..BLOCK_SIZE {
+        for x in 0..BLOCK_SIZE {
+            if block[y][x] != block_kind::NONE {
+                field_buf[y + pos.y][x + pos.x] = block[y][x];
             }
         }
     }
