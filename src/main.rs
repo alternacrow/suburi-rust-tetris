@@ -18,6 +18,7 @@ struct Cli {
 enum Mode {
     Normal,
     Auto,
+    Learning,
 }
 
 fn main() {
@@ -29,6 +30,9 @@ fn main() {
         }
         Some(Mode::Auto) => {
             play::auto();
+        }
+        Some(Mode::Learning) => {
+            ga::learning();
         }
     }
 }
