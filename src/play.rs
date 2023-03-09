@@ -150,7 +150,7 @@ pub fn auto() {
             // 100ミリ秒毎に自動で操作する
             sleep(100);
 
-            let elite = eval(&game);
+            let elite = eval(&game, &[100, 1, 10, 100]);
             game = elite;
 
             // エリート個体のブロックを落下

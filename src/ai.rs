@@ -1,11 +1,12 @@
 use crate::block::block_kind;
+use crate::ga::{GenoSeq, GenomeKind};
 use crate::game::{
     fix_block, hard_drop, hold, move_block, rotate_right, Field, Game, Position, FIELD_HEIGHT,
     FIELD_WIDTH,
 };
 
 // 評価して、一番優秀な個体を返す
-pub fn eval(game: &Game) -> Game {
+pub fn eval(game: &Game, weight: &GenoSeq) -> Game {
     // エリートブロック (Game, score)
     let mut elite = (game.clone(), 0f64);
 
@@ -53,10 +54,10 @@ pub fn eval(game: &Game) -> Game {
                 let mut dead_space = 1.0 - normalization(dead_space as f64, 0.0, 200.0);
 
                 // インプット情報に重み付け
-                line *= 100.0;
-                height_max *= 1.0;
-                height_diff *= 10.0;
-                dead_space *= 100.0;
+                line *= weight[GenomeKind::Line] as f64;
+                height_max *= weight[GenomeKind::HeightMax] as f64;
+                height_diff *= weight[GenomeKind::HeightDiff] as f64;
+                dead_space *= weight[GenomeKind::DeadSpace] as f64;
 
                 // インプット情報を評価
                 let score = line + height_max + height_diff + dead_space;
