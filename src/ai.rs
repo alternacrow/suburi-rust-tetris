@@ -6,8 +6,8 @@ use crate::game::{
 
 // 評価して、一番優秀な個体を返す
 pub fn eval(game: &Game) -> Game {
-    // エリートブロック (Game, line, height_max)
-    let mut elite = (game.clone(), 0, FIELD_HEIGHT);
+    // エリートブロック (Game, score)
+    let mut elite = (game.clone(), 0f64);
 
     // 全回転
     for rotate_count in 0..=3 {
@@ -36,12 +36,20 @@ pub fn eval(game: &Game) -> Game {
             let line = erase_line_count(&game.field); // 消せるライン数
             let height_max = field_height_max(&game.field); // フィールドの高さ
 
+            // 正規化
+            let mut line = normalization(line as f64, 0.0, 4.0);
+            let mut height_max = 1.0 - normalization(height_max as f64, 0.0, 20.0);
+
+            // インプット情報に重み付け
+            line *= 100.0;
+            height_max *= 1.0;
+
             // インプット情報を評価
-            if line >= elite.1 && height_max <= elite.2 {
+            let score = line + height_max;
+            if elite.1 < score {
                 // 一番良い個体を記録
                 elite.0 = game;
-                elite.1 = line;
-                elite.2 = height_max;
+                elite.1 = score;
             }
         }
     }
@@ -80,4 +88,9 @@ fn field_height_max(field: &Field) -> usize {
         }
     }
     unreachable!()
+}
+
+// 正規化(Min-Max normalization)する
+fn normalization(value: f64, min: f64, max: f64) -> f64 {
+    (value - min) / (max - min)
 }
