@@ -6,11 +6,12 @@ use rand::{
     Rng,
 };
 use std::ops::Index;
+use std::thread;
 
 // 遺伝子集合の個体数
-const POPULATION: usize = 10;
+const POPULATION: usize = 20;
 // 最大世代数
-const GENERATION_MAX: usize = 10;
+const GENERATION_MAX: usize = 20;
 // nライン消したら終了(1個体の実行終了条件)
 const LINE_COUNT_MAX: usize = 256;
 // 交叉率
@@ -67,22 +68,26 @@ pub fn learning() {
     let mut inds = rand::random::<[Individual; POPULATION]>();
     for gen in 1..=GENERATION_MAX {
         println!("{gen}世代目:");
-        for (i, ind) in inds.iter_mut().enumerate() {
-            let mut game = Game::new();
-            // nライン消したら終了
-            while game.line < LINE_COUNT_MAX {
-                // 指定した遺伝子で評価後のエリート個体を取得
-                let elite = eval(&game, &ind.geno);
-                game = elite;
-                // エリート個体のブロックを落下
-                if landing(&mut game).is_err() {
-                    break;
-                }
+        thread::scope(|s| {
+            for (i, ind) in inds.iter_mut().enumerate() {
+                s.spawn(move || {
+                    let mut game = Game::new();
+                    // nライン消したら終了
+                    while game.line < LINE_COUNT_MAX {
+                        // 指定した遺伝子で評価後のエリート個体を取得
+                        let elite = eval(&game, &ind.geno);
+                        game = elite;
+                        // エリート個体のブロックを落下
+                        if landing(&mut game).is_err() {
+                            break;
+                        }
+                    }
+                    // 個体の最終スコアを記録
+                    ind.score = game.score;
+                    println!("{i}: {:?} => {}", ind.geno, game.score);
+                });
             }
-            // 個体の最終スコアを記録
-            ind.score = game.score;
-            println!("{i}: {:?} => {}", ind.geno, game.score);
-        }
+        });
 
         // 次世代の生成
         let next_genos = gen_next_generation(&inds);
